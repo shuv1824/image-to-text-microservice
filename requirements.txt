@@ -5,3 +5,4 @@ pytest
 uvicorn
 requests
 pre-commit
+pydantic-settings
