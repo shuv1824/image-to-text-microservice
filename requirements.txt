@@ -6,3 +6,6 @@ uvicorn
 requests
 pre-commit
 pydantic-settings
+aiofiles
+python-multipart
+pillow
