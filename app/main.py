@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic_settings import BaseSettings
+from PIL import Image
 
 
 class Settings(BaseSettings):
@@ -44,11 +45,17 @@ async def img_echo_view(
         raise HTTPException(detail="Invalid endpoint", status_code=400)
 
     UPLOAD_DIR.mkdir(exist_ok=True)
+
     bytes_str = io.BytesIO(await file.read())
+    try:
+        img = Image.open(bytes_str)
+    except:
+        raise HTTPException(detail="Invalid image", status_code=400)
+
     fname = pathlib.Path(file.filename)
     fext = fname.suffix
     dest = UPLOAD_DIR / f"{uuid.uuid1()}{fext}"
-    with open(str(dest), "wb") as out:
-        out.write(bytes_str.read())
+
+    img.save(dest)
 
     return dest
