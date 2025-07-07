@@ -1,7 +1,10 @@
+import io
 import shutil
-import time
+
+# import time
 from fastapi.testclient import TestClient
 from app.main import app, BASE_DIR, UPLOAD_DIR
+from PIL import Image, ImageChops
 
 client = TestClient(app)
 
@@ -15,10 +18,20 @@ def test_home_view():
 def test_img_echo_view():
     img_saved_dir = BASE_DIR / "images"
     for path in img_saved_dir.glob("*"):
+        try:
+            img = Image.open(path)
+        except:
+            img = None
+
         response = client.post("/img-echo/", files={"file": open(path, "rb")})
-        assert response.status_code == 200
-        fext = str(path.suffix).replace(".", "")
-        assert fext in response.headers["Content-Type"]
+
+        if img is None:
+            assert response.status_code == 400
+        else:
+            assert response.status_code == 200
+            r_stream = io.BytesIO(response.content)
+            r_img = Image.open(r_stream)
+            assert ImageChops.difference(img, r_img).getbbox() is None
 
     # time.sleep(3)  # for testing directory creation
     shutil.rmtree(UPLOAD_DIR)
