@@ -15,6 +15,24 @@ def test_home_view():
     assert "text/html" in response.headers["Content-Type"]
 
 
+def test_prediction_view():
+    img_saved_dir = BASE_DIR / "images"
+    for path in img_saved_dir.glob("*"):
+        try:
+            img = Image.open(path)
+        except:
+            img = None
+
+        response = client.post("/", files={"file": open(path, "rb")})
+
+        if img is None:
+            assert response.status_code == 400
+        else:
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data.keys()) == 2
+
+
 def test_img_echo_view():
     img_saved_dir = BASE_DIR / "images"
     for path in img_saved_dir.glob("*"):
