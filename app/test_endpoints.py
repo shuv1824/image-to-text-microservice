@@ -3,7 +3,7 @@ import shutil
 
 # import time
 from fastapi.testclient import TestClient
-from app.main import app, BASE_DIR, UPLOAD_DIR
+from app.main import app, BASE_DIR, UPLOAD_DIR, get_settings
 from PIL import Image, ImageChops
 
 client = TestClient(app)
@@ -16,6 +16,7 @@ def test_home_view():
 
 
 def test_prediction_view():
+    settings = get_settings()
     img_saved_dir = BASE_DIR / "images"
     for path in img_saved_dir.glob("*"):
         try:
@@ -23,7 +24,11 @@ def test_prediction_view():
         except:
             img = None
 
-        response = client.post("/", files={"file": open(path, "rb")})
+        response = client.post(
+            "/",
+            files={"file": open(path, "rb")},
+            headers={"Authorization": f"Bearer {settings.app_auth_token}"},
+        )
 
         if img is None:
             assert response.status_code == 400

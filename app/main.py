@@ -3,7 +3,7 @@ import io
 import uuid
 import pytesseract
 from functools import lru_cache
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Header, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic_settings import BaseSettings
@@ -11,8 +11,10 @@ from PIL import Image
 
 
 class Settings(BaseSettings):
+    app_auth_token: str
     debug: bool = False
     echo_active: bool = False
+    skip_auth: bool = False
 
     class Config:
         env_file = ".env"
@@ -38,10 +40,24 @@ def home_view(request: Request, settings: Settings = Depends(get_settings)):
     return templates.TemplateResponse(request, "home.html")
 
 
+def verify_auth(authorization=Header(None), settings: Settings = Depends(get_settings)):
+    if settings.debug and settings.skip_auth:
+        return
+    if authorization is None:
+        raise HTTPException(detail="Invalid endpoint", status_code=401)
+
+    label, token = authorization.split(" ")
+    if label != "Bearer" or token != settings.app_auth_token:
+        raise HTTPException(detail="Invalid endpoint", status_code=401)
+
+
 @app.post("/")
 async def prediction_view(
-    file: UploadFile = File(...), settings: Settings = Depends(get_settings)
+    file: UploadFile = File(...),
+    authorization=Header(None),
+    settings: Settings = Depends(get_settings),
 ):
+    verify_auth(authorization, settings)
     bytes_str = io.BytesIO(await file.read())
     try:
         img = Image.open(bytes_str)
